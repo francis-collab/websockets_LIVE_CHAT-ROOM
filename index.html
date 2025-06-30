@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Chat Room with Users</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: sans-serif;
+      display: flex;
+      height: 100vh;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    #users {
+      width: 200px;
+      background: #2d3a4a;
+      color: white;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    #users h3 {
+      margin-top: 0;
+    }
+    #chatContainer {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+    }
+    #messages {
+      flex: 1;
+      background: white;
+      padding: 1rem;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .messageBlock {
+      display: flex;
+      flex-direction: column;
+      max-width: 60%;
+    }
+    .messageBlock.me {
+      align-self: flex-end;
+      text-align: right;
+    }
+    .senderName {
+      font-weight: bold;
+      margin-bottom: 0.2rem;
+    }
+    .bubble {
+      padding: 0.6rem 1rem;
+      border-radius: 12px;
+      background: #e1e4fb;
+      position: relative;
+      word-wrap: break-word;
+    }
+    .bubble.me {
+      background: #d2f8d2;
+    }
+    .timestamp {
+      font-size: 0.75rem;
+      color: gray;
+      margin-top: 2px;
+      text-align: right;
+    }
+    .system {
+      text-align: center;
+      color: gray;
+      font-style: italic;
+      margin: 0.5rem 0;
+    }
+    #inputArea {
+      display: flex;
+      gap: 0.5rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.6rem;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="users">
+    <h3>🟢 Online</h3>
+    <ul id="userList"></ul>
+  </div>
+  <div id="chatContainer">
+    <div id="messages"></div>
+    <div id="inputArea">
+      <input type="text" id="chatInput" placeholder="Message..." />
+      <button onclick="send()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const name = prompt("Enter your name:");
+    const ws = new WebSocket("ws://localhost:8001");
+    const input = document.getElementById("chatInput");
+    const messages = document.getElementById("messages");
+    const userList = document.getElementById("userList");
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "hello", name }));
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "user_list") {
+        userList.innerHTML = "";
+        data.users.forEach(user => {
+          const li = document.createElement("li");
+          li.textContent = user;
+          userList.appendChild(li);
+        });
+        return;
+      }
+
+      if (data.type === "system") {
+        const sys = document.createElement("div");
+        sys.className = "system";
+        sys.textContent = data.message;
+        messages.appendChild(sys);
+        messages.scrollTop = messages.scrollHeight;
+        return;
+      }
+
+      if (data.type === "chat") {
+        const block = document.createElement("div");
+        block.className = "messageBlock";
+        if (data.name === name) block.classList.add("me");
+
+        const sender = document.createElement("div");
+        sender.className = "senderName";
+        sender.textContent = data.name;
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        if (data.name === name) bubble.classList.add("me");
+        bubble.textContent = data.message;
+
+        const time = document.createElement("div");
+        time.className = "timestamp";
+        time.textContent = data.time;
+
+        block.appendChild(sender);
+        block.appendChild(bubble);
+        block.appendChild(time);
+        messages.appendChild(block);
+        messages.scrollTop = messages.scrollHeight;
+      }
+    };
+
+    function send() {
+      const text = input.value.trim();
+      if (text !== "") {
+        const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        ws.send(JSON.stringify({ type: "chat", name, message: text, time }));
+        input.value = "";
+      }
+    }
+
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") send();
+    });
+  </script>
+</body>
+</html>
+
