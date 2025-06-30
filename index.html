@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Chat Room with Users</title>
+  <title>Chat Room with Avatars</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -37,36 +37,44 @@
       margin-bottom: 1rem;
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
+      gap: 0.8rem;
     }
     .messageBlock {
       display: flex;
-      flex-direction: column;
-      max-width: 60%;
+      align-items: flex-start;
+      gap: 0.6rem;
+      max-width: 70%;
     }
-    .messageBlock.me {
-      align-self: flex-end;
+    .me {
+      margin-left: auto;
+      flex-direction: row-reverse;
       text-align: right;
     }
-    .senderName {
-      font-weight: bold;
-      margin-bottom: 0.2rem;
+    .avatar {
+      font-size: 1.5rem;
+      width: 2rem;
+      text-align: center;
+      user-select: none;
     }
-    .bubble {
+    .msgContent {
+      display: flex;
+      flex-direction: column;
+      background: #e1e4fb;
       padding: 0.6rem 1rem;
       border-radius: 12px;
-      background: #e1e4fb;
-      position: relative;
-      word-wrap: break-word;
     }
-    .bubble.me {
+    .me .msgContent {
       background: #d2f8d2;
+    }
+    .sender {
+      font-weight: bold;
+      margin-bottom: 0.25rem;
     }
     .timestamp {
       font-size: 0.75rem;
       color: gray;
-      margin-top: 2px;
       text-align: right;
+      margin-top: 2px;
     }
     .system {
       text-align: center;
@@ -104,10 +112,17 @@
 
   <script>
     const name = prompt("Enter your name:");
+    const avatarEmoji = generateAvatarEmoji(name);
     const ws = new WebSocket("ws://localhost:8001");
     const input = document.getElementById("chatInput");
     const messages = document.getElementById("messages");
     const userList = document.getElementById("userList");
+
+    function generateAvatarEmoji(user) {
+      const emojis = ["😃", "👩‍💻", "🧑‍🚀", "🦊", "🐵", "🐱", "🐯", "🐸", "🐥", "🧙‍♂️", "🤠", "🐼"];
+      const index = user.toLowerCase().charCodeAt(0) % emojis.length;
+      return emojis[index];
+    }
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: "hello", name }));
@@ -140,22 +155,30 @@
         block.className = "messageBlock";
         if (data.name === name) block.classList.add("me");
 
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.textContent = generateAvatarEmoji(data.name);
+
+        const content = document.createElement("div");
+        content.className = "msgContent";
+
         const sender = document.createElement("div");
-        sender.className = "senderName";
+        sender.className = "sender";
         sender.textContent = data.name;
 
         const bubble = document.createElement("div");
-        bubble.className = "bubble";
-        if (data.name === name) bubble.classList.add("me");
         bubble.textContent = data.message;
 
         const time = document.createElement("div");
         time.className = "timestamp";
         time.textContent = data.time;
 
-        block.appendChild(sender);
-        block.appendChild(bubble);
-        block.appendChild(time);
+        content.appendChild(sender);
+        content.appendChild(bubble);
+        content.appendChild(time);
+
+        block.appendChild(avatar);
+        block.appendChild(content);
         messages.appendChild(block);
         messages.scrollTop = messages.scrollHeight;
       }
